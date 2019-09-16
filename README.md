@@ -1,1 +1,1 @@
-Go lib for myself.
+Golang lib for myself.
