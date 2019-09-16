@@ -1,2 +1,1 @@
-# dockerfile_test
-dockerfile_test
+Go lib for myself.
