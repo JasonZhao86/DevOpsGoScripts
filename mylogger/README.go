@@ -11,6 +11,7 @@ func main() {
 	// logger = consolelogger
 	filelogger := mylogger.NewFileLogger(mylogger.InfoLevel, "info.log", "d:/")
 	logger = filelogger
+	logger.Close()
 
 	// 用一个统一的接口名字调用这些方法，所以无论是console打印还是日志记录，下面的代码都不需要更改。
 	for i := 0; i < 100000; i++ {
@@ -20,5 +21,4 @@ func main() {
 		logger.Error("%s日志测试", "error")
 		logger.Fatal("%s日志测试", "fatal")
 	}
-	filelogger.Close()
 }
