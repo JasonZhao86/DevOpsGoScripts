@@ -16,6 +16,8 @@ type FileLogger struct {
 	ErrFile     *os.File
 	MaxSize     int64
 	LogDataChan chan *LogData
+	SplitTime	time.Time
+	SplitDuration	time.Duration
 }
 
 // LogData 日志相关信息
@@ -51,6 +53,9 @@ func NewFileLogger(Level Level, FileName, FilePath string) (f *FileLogger) {
 		MaxSize:  1 * MB,
 		// 通道最多只能存5万条日志，超过的将丢弃
 		LogDataChan: make(chan *LogData, 50000),
+		SplitTime:	time.Now(),
+		// 每小时切割一次
+		SplitDuration:	time.Hour * 1,
 	}
 
 	/*
@@ -75,11 +80,18 @@ func (f *FileLogger) CheckSplit(file *os.File) bool {
 	return filesize >= f.MaxSize
 }
 
+// CheckSplitByTime 根据文件的时间切割
+func (f *FileLogger) CheckSplitByTime() bool{
+	timeNow := time.Now()
+	return timeNow.Sub(f.SplitTime) >= f.SplitDuration
+}
+
 // SplitFile 切割日志
 func (f *FileLogger) SplitFile(file *os.File) *os.File { // 传入的可能是正常日志文件，也可能是error日志文件句柄
-	splittime := time.Now().Unix()
+	splittime := time.Now()
+	f.SplitTime = splittime
 	filename := file.Name()                                  // 获取的filename是带路径的
-	tarname := fmt.Sprintf("%s.log_%v", filename, splittime) // 拼接后的tarname也是带路径的。
+	tarname := fmt.Sprintf("%s.log_%v", filename, splittime.Unix()) // 拼接后的tarname也是带路径的。
 	file.Close()
 	os.Rename(filename, tarname)
 	fileobj, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -136,14 +148,16 @@ func (f *FileLogger) WriteLogBackend() {
 			logdata.Message,
 		)
 
-		if f.CheckSplit(f.File) {
+		// if f.CheckSplit(f.File) {
+		if f.CheckSplitByTime() {
 			f.File = f.SplitFile(f.File)
 		}
 		fmt.Fprintln(f.File, logmsg)
 
 		level := ConvertLevelstringTOLevel(logdata.LogLevel)
 		if level >= ErrorLevel {
-			if f.CheckSplit(f.ErrFile) {
+			// if f.CheckSplit(f.ErrFile) {
+			if f.CheckSplitByTime() {
 				f.ErrFile = f.SplitFile(f.ErrFile)
 			}
 			fmt.Fprintln(f.ErrFile, logmsg)
